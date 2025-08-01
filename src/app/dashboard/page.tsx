@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { 
   Home, 
   List, 
-  Camera, 
+  MessageCircle, 
   User, 
   Bell, 
   Calendar,
@@ -24,6 +24,13 @@ import { useRouter } from 'next/navigation';
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const router = useRouter();
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'chat') {
+      router.push('/chat');
+    }
+  };
 
   const mockTasks = [
     {
@@ -222,7 +229,7 @@ export default function DashboardPage() {
                   Start Task
                 </button>
                 <button className="p-3 text-gray-400 hover:text-blue-500 bg-white/50 dark:bg-gray-700/50 rounded-2xl hover:shadow-lg transition-all duration-200">
-                  <Camera className="w-5 h-5" />
+                  <MessageCircle className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -234,7 +241,7 @@ export default function DashboardPage() {
       <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-t border-white/20 px-6 py-4">
         <div className="flex items-center justify-around">
           <button 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleTabChange('dashboard')}
             className={`flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 ${
               activeTab === 'dashboard' 
                 ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' 
@@ -245,7 +252,7 @@ export default function DashboardPage() {
             <span className="text-xs font-medium">Dashboard</span>
           </button>
           <button 
-            onClick={() => setActiveTab('tasks')}
+            onClick={() => handleTabChange('tasks')}
             className={`flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 ${
               activeTab === 'tasks' 
                 ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' 
@@ -256,18 +263,18 @@ export default function DashboardPage() {
             <span className="text-xs font-medium">Tasks</span>
           </button>
           <button 
-            onClick={() => setActiveTab('camera')}
+            onClick={() => handleTabChange('chat')}
             className={`flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 ${
-              activeTab === 'camera' 
+              activeTab === 'chat' 
                 ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' 
                 : 'text-gray-400 hover:text-blue-500'
             }`}
           >
-            <Camera className="w-6 h-6" />
-            <span className="text-xs font-medium">Camera</span>
+            <MessageCircle className="w-6 h-6" />
+            <span className="text-xs font-medium">Chat</span>
           </button>
           <button 
-            onClick={() => setActiveTab('profile')}
+            onClick={() => handleTabChange('profile')}
             className={`flex flex-col items-center space-y-1 p-2 rounded-2xl transition-all duration-200 ${
               activeTab === 'profile' 
                 ? 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' 
