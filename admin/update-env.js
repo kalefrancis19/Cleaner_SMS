@@ -3,20 +3,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Function to update the .env.local file with new backend port
-function updateEnvFile(port) {
-//   const envPath = path.join(__dirname, '.env.local');
-//   const apiUrl = `http://localhost:${port}/api`;
-  
-//   try {
-//     fs.writeFileSync(envPath, `NEXT_PUBLIC_API_URL=${apiUrl}\n`);
-//     console.log(`✅ Updated .env.local with API URL: ${apiUrl}`);
-//   } catch (error) {
-//     console.error('❌ Error updating .env.local:', error.message);
-//   }
-// }
-
-// Function to read backend port from config
 function getBackendPort() {
   try {
     const configPath = path.join(__dirname, '..', 'backend', 'config.env');
