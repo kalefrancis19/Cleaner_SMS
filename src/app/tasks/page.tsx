@@ -290,7 +290,7 @@ export default function TasksPage() {
                               className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                             >
                               <Play className="w-4 h-4" />
-                              <span className="font-semibold">Continue Property</span>
+                              <span className="font-semibold">Continue</span>
                             </button>
                           ) : hasPendingTasks ? (
                             <button 

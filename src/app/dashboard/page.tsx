@@ -34,6 +34,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedUpcomingProperties, setExpandedUpcomingProperties] = useState<Set<string>>(new Set());
+  const [currentProperty, setCurrentProperty] = useState<any | null>(null);
+  const [currentPropertyTasks, setCurrentPropertyTasks] = useState<any[]>([]);
+  const [isCurrentPropertyExpanded, setIsCurrentPropertyExpanded] = useState(false);
   const router = useRouter();
   const { authState } = useAuth();
   
@@ -77,8 +80,23 @@ export default function DashboardPage() {
         const response = await apiService.getTasks();
         console.log('Tasks response:', response);
         if (response.success) {
-          setTasks(response.data || []);
-          console.log('Tasks loaded:', response.data);
+          const allTasks = response.data || [];
+          setTasks(allTasks);
+
+          const grouped = groupTasksByProperty(allTasks);
+          const currentPropertyEntry = Object.values(grouped).find(group => 
+            group.tasks.some(t => t.status === 'in_progress')
+          );
+
+          if (currentPropertyEntry) {
+            setCurrentProperty(currentPropertyEntry.property);
+            setCurrentPropertyTasks(currentPropertyEntry.tasks);
+          } else {
+            setCurrentProperty(null);
+            setCurrentPropertyTasks([]);
+          }
+
+          console.log('Tasks loaded:', allTasks);
         } else {
           setError(response.message || 'Failed to load tasks');
         }
@@ -304,33 +322,61 @@ export default function DashboardPage() {
         <div className="bg-gradient-to-r from-blue-500/5 to-purple-500/5 dark:from-blue-500/10 dark:to-purple-500/10 backdrop-blur-xl rounded-3xl p-6 shadow-lg border border-blue-200/30 dark:border-blue-500/20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-gray-900 dark:text-white text-lg">Current Property</h3>
-            <span className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full shadow-lg">
-              In Progress
-            </span>
+            {currentProperty && (
+              <span className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full shadow-lg">
+                In Progress
+              </span>
+            )}
           </div>
-          <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            Downtown Apartment
-          </h4>
-          <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 flex items-center">
-            <MapPin className="w-4 h-4 mr-2" />
-            123 Main St, Downtown - 2 rooms, 1 bathroom
-          </p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                <Play className="w-4 h-4" />
-                <span className="font-semibold">Continue Property</span>
-              </button>
-              <button className="flex items-center space-x-2 bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-                <Pause className="w-4 h-4" />
-                <span>Pause</span>
-              </button>
+          {currentProperty ? (
+            <div>
+              <div className="cursor-pointer" onClick={() => setIsCurrentPropertyExpanded(!isCurrentPropertyExpanded)}>
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  {currentProperty.name || 'Unknown Property'}
+                </h4>
+                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  {currentProperty.address || 'Address not available'}
+                </p>
+              </div>
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center space-x-3">
+                  <button className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                    <Play className="w-4 h-4" />
+                    <span className="font-semibold">Continue</span>
+                  </button>
+                  <button className="flex items-center space-x-2 bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
+                    <Pause className="w-4 h-4" />
+                    <span>Pause</span>
+                  </button>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Time Left</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-lg">
+                    {currentPropertyTasks.find(t => t.status === 'in_progress')?.estimatedTime || 'N/A'}
+                  </p>
+                </div>
+              </div>
+              {isCurrentPropertyExpanded && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-blue-200/50 animate-slide-down">
+                  {currentPropertyTasks.map((task, index) => (
+                    <div key={task._id || task.id} className="bg-white/80 rounded-lg p-3 border border-gray-200 shadow-md">
+                      <div className="flex items-center justify-between">
+                        <h6 className="font-semibold text-gray-800 text-sm">{task.title}</h6>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium shadow-sm ${getStatusColor(task.status)}`}>
+                          {task.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600 dark:text-gray-300">Time Left</p>
-              <p className="font-bold text-gray-900 dark:text-white text-lg">2.5 hours</p>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600 dark:text-gray-300 text-sm">No tasks currently in progress.</p>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
