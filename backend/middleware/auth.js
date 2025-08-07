@@ -3,12 +3,19 @@ const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided or malformed header.'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access denied. No token provided'
+        message: 'Access denied. Token missing after Bearer.'
       });
     }
 
@@ -18,7 +25,7 @@ const auth = async (req, res, next) => {
     if (!user || !user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token or user not found'
+        message: 'Invalid token or user not found.'
       });
     }
 
@@ -28,7 +35,7 @@ const auth = async (req, res, next) => {
     console.error('Auth middleware error:', error);
     res.status(401).json({
       success: false,
-      message: 'Invalid token'
+      message: error.name === 'JsonWebTokenError' ? 'Invalid or malformed token.' : 'Authentication failed.'
     });
   }
 };
