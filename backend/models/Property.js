@@ -3,24 +3,91 @@ const mongoose = require('mongoose');
 const roomTaskSchema = new mongoose.Schema({
   roomType: {
     type: String,
-    enum: ['bedroom', 'bathroom', 'kitchen', 'living_room', 'dining_room', 'office', 'laundry', 'other'],
     required: true
   },
   tasks: [{
     description: {
       type: String,
       required: true
-    },
-    isCompleted: {
-      type: Boolean,
-      default: false
-    },
-    specialNotes: String,
-    estimatedTime: String
+    }
   }],
+  estimatedTime: {
+    type: String,
+    required: true
+  },
   specialInstructions: [String],
-  fragileItems: [String]
+  isCompleted: {
+    type: Boolean,
+    default: false
+  }
 }, { _id: true });
+
+const photoSchema = new mongoose.Schema({
+  url: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['before', 'during', 'after'],
+    required: true
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  },
+  isUploaded: {
+    type: Boolean,
+    default: true
+  },
+  localPath: String,
+  tags: [String],
+  notes: String,
+}, { _id: true });
+
+const issueSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  photoId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Photo'
+  },
+  location: String,
+  notes: String,
+  isResolved: {
+    type: Boolean,
+    default: false
+  },
+  resolvedAt: Date
+}, { timestamps: true });
+
+const aiFeedbackSchema = new mongoose.Schema({
+  photoId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Photo'
+  },
+  issueId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Issue'
+  },
+  feedback: {
+    type: String,
+    required: true
+  },
+  confidence: {
+    type: Number,
+    min: 0,
+    max: 1,
+    required: true
+  },
+  suggestions: [String],
+}, { timestamps: true });
 
 const propertySchema = new mongoose.Schema({
   propertyId: {
@@ -43,22 +110,8 @@ const propertySchema = new mongoose.Schema({
     enum: ['apartment', 'house', 'office'],
     required: true
   },
-  rooms: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-  bathrooms: {
-    type: Number,
-    required: true,
-    min: 1
-  },
   squareFootage: {
     type: Number,
-    required: true
-  },
-  estimatedTime: {
-    type: String,
     required: true
   },
   manual: {
@@ -75,28 +128,35 @@ const propertySchema = new mongoose.Schema({
       default: Date.now
     }
   },
+
   roomTasks: [roomTaskSchema],
-  instructions: {
-    type: String,
-    trim: true
+
+  scheduledTime: Date,
+ 
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
-  specialRequirements: [{
-    type: String,
-    trim: true
-  }],
-  owner: {
-    name: String,
-    email: String,
-    phone: String
+
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
+
+  photos: [photoSchema],
+
+  issues: [issueSchema],
+
+  aiFeedback: [aiFeedbackSchema],
+
+  startedAt: Date,
+
+  completedAt: Date,
+
   isActive: {
     type: Boolean,
     default: true
   },
-  coordinates: {
-    latitude: Number,
-    longitude: Number
-  }
 }, {
   timestamps: true
 });

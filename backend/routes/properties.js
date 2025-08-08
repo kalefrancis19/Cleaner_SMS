@@ -260,4 +260,85 @@ router.patch('/:id/toggle-status', async (req, res) => {
   }
 });
 
-module.exports = router; 
+// --- RoomTasks: Update status ---
+router.patch('/:propertyId/room-tasks/:roomType/:taskIndex/status', async (req, res) => {
+  try {
+    const { propertyId, roomType, taskIndex } = req.params;
+    const { isCompleted } = req.body;
+    const property = await Property.findOne({ _id: propertyId });
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    const roomTask = property.roomTasks.find(rt => rt.roomType === roomType);
+    if (!roomTask || !roomTask.tasks[taskIndex]) return res.status(404).json({ success: false, message: 'Room task not found' });
+    roomTask.tasks[taskIndex].isCompleted = isCompleted;
+    await property.save();
+    res.json({ success: true, message: 'Room task status updated', data: property });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// --- Add photo to property ---
+router.post('/:propertyId/photos', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const { url, type, notes, localPath, tags } = req.body;
+    const property = await Property.findById(propertyId);
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    property.photos.push({ url, type, notes, localPath, tags });
+    await property.save();
+    res.json({ success: true, message: 'Photo added', data: property });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// --- Add issue to property ---
+router.post('/:propertyId/issues', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const { type, description, photoId, location, notes } = req.body;
+    const property = await Property.findById(propertyId);
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    property.issues.push({ type, description, photoId, location, notes });
+    await property.save();
+    res.json({ success: true, message: 'Issue added', data: property });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// --- Update notes for a roomTask ---
+router.patch('/:propertyId/room-tasks/:roomType/notes', async (req, res) => {
+  try {
+    const { propertyId, roomType } = req.params;
+    const { notes } = req.body;
+    const property = await Property.findById(propertyId);
+    if (!property) return res.status(404).json({ success: false, message: 'Property not found' });
+    const roomTask = property.roomTasks.find(rt => rt.roomType === roomType);
+    if (!roomTask) return res.status(404).json({ success: false, message: 'Room task not found' });
+    roomTask.notes = notes;
+    await property.save();
+    res.json({ success: true, message: 'Notes updated', data: property });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// --- Get stats for properties/roomTasks ---
+router.get('/stats', async (req, res) => {
+  try {
+    const properties = await Property.find({});
+    let totalTasks = 0, completedTasks = 0;
+    properties.forEach(property => {
+      property.roomTasks.forEach(rt => {
+        totalTasks += rt.tasks.length;
+        completedTasks += rt.tasks.filter(t => t.isCompleted).length;
+      });
+    });
+    res.json({ success: true, data: { totalTasks, completedTasks, completionRate: totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(1) : 0 } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+module.exports = router;

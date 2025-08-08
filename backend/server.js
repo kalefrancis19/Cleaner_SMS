@@ -142,18 +142,11 @@ const initializeDatabase = async () => {
     console.log('🔄 Starting database initialization...');
     const User = require('./models/User');
     const Property = require('./models/Property');
-    const Task = require('./models/Task');
 
     // Check if sample data already exists
     const existingCleaner = await User.findOne({ email: 'elite@gmail.com' });
     const existingCustomer = await User.findOne({ email: 'john.smith@email.com' });
     const existingAdmin = await User.findOne({ email: 'admin@propertysanta.com' });
-    
-    console.log('🔍 Existing users found:', {
-      cleaner: !!existingCleaner,
-      customer: !!existingCustomer,
-      admin: !!existingAdmin
-    });
     
     let cleaner, customer, admin;
     
@@ -167,363 +160,124 @@ const initializeDatabase = async () => {
         phone: '+1 (555) 123-4567',
         role: 'cleaner',
         rating: 4.8,
-        avatar: null,
-        specialties: ['Deep Cleaning', 'Kitchen Sanitization', 'Bathroom Cleaning', 'Office Cleaning'],
-        availability: {
-          monday: true,
-          tuesday: true,
-          wednesday: true,
-          thursday: true,
-          friday: true,
-          saturday: false,
-          sunday: false
-        },
-        lastLogin: new Date()
+        specialties: ['Deep Cleaning', 'Kitchen Sanitization'],
+        availability: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
       });
       await cleaner.save();
       console.log('✅ Sample cleaner created');
     } else {
       cleaner = existingCleaner;
-      console.log('✅ Using existing cleaner');
     }
     
     // Create sample customer if it doesn't exist
     if (!existingCustomer) {
       console.log('👤 Creating sample customer...');
-      customer = new User({
-        name: 'John Smith',
-        email: 'john.smith@email.com',
-        password: 'password',
-        phone: '+1 (555) 987-6543',
-        role: 'customer',
-        rating: 0,
-        avatar: null,
-        specialties: [],
-        availability: {
-          monday: false,
-          tuesday: false,
-          wednesday: false,
-          thursday: false,
-          friday: false,
-          saturday: false,
-          sunday: false
-        },
-        lastLogin: new Date()
-      });
+      customer = new User({ name: 'John Smith', email: 'john.smith@email.com', password: 'password', phone: '+1 (555) 987-6543', role: 'customer' });
       await customer.save();
       console.log('✅ Sample customer created');
     } else {
       customer = existingCustomer;
-      console.log('✅ Using existing customer');
     }
     
     // Create sample admin if it doesn't exist
     if (!existingAdmin) {
       console.log('👤 Creating sample admin...');
-      admin = new User({
-        name: 'PropertySanta Admin',
-        email: 'admin@propertysanta.com',
-        password: 'admin123',
-        phone: '+1 (555) 000-0000',
-        role: 'admin',
-        rating: 0,
-        avatar: null,
-        specialties: [],
-        availability: {
-          monday: false,
-          tuesday: false,
-          wednesday: false,
-          thursday: false,
-          friday: false,
-          saturday: false,
-          sunday: false
-        },
-        lastLogin: new Date()
-      });
+      admin = new User({ name: 'PropertySanta Admin', email: 'admin@propertysanta.com', password: 'admin123', phone: '+1 (555) 000-0000', role: 'admin' });
       await admin.save();
       console.log('✅ Sample admin created');
     } else {
       admin = existingAdmin;
-      console.log('✅ Using existing admin');
     }
 
     // Check if properties already exist
-    const existingProperties = await Property.find({});
-    console.log('🔍 Existing properties found:', existingProperties.length);
-    
-    if (existingProperties.length === 0) {
-      console.log('🔄 Creating sample properties...');
-    } else {
-      console.log('✅ Using existing properties');
-      return; // Skip creation if properties already exist
+    const existingProperties = await Property.countDocuments();
+    if (existingProperties > 0) {
+      console.log('✅ Sample properties already exist. Skipping creation.');
+      return;
     }
 
-    // Create sample properties
-    console.log('🏠 Creating sample properties...');
-    const properties = [
-      {
-        propertyId: 'EO-1208-RDU',
-        name: 'Enchanted Oaks House',
-        address: '1208 Enchanted Oaks Drive, Raleigh, NC 27606',
-        type: 'house',
-        rooms: 3,
-        bathrooms: 2,
-        squareFootage: 1945,
-        estimatedTime: '2 hours',
-        manual: {
-          title: 'Live Cleaning & Maintenance Manual',
-          content: `Live Cleaning & Maintenance Manual
-1208 Enchanted Oaks Drive, Raleigh, NC 27606
-Property Overview
-- Property ID: EO-1208-RDU
-- Type: Bedroom, Bathroom
-- Square Footage: 1,945 sq ft
-- time: 2hours
-
-Bedrooms
-- make the bed
-- clean the floor
-- Do not move ceramic lamp on master dresser (fragile)
-
-Bathrooms
-- Use glass cleaner on mirror 
-- Scrub grout weekly with baking soda mix
-- Refill soap, TP, hand towels`,
-          lastUpdated: new Date()
-        },
-        roomTasks: [
-          {
-            roomType: 'bedroom',
-            tasks: [
-              {
-                description: 'Make the bed',
-                isCompleted: false,
-                estimatedTime: '10 minutes'
-              },
-              {
-                description: 'Clean the floor',
-                isCompleted: false,
-                estimatedTime: '15 minutes'
-              }
-            ],
-            specialInstructions: ['Do not move ceramic lamp on master dresser (fragile)'],
-            fragileItems: ['Ceramic lamp on master dresser']
-          },
-          {
-            roomType: 'bathroom',
-            tasks: [
-              {
-                description: 'Use glass cleaner on mirror',
-                isCompleted: false,
-                estimatedTime: '5 minutes'
-              },
-              {
-                description: 'Scrub grout weekly with baking soda mix',
-                isCompleted: false,
-                estimatedTime: '20 minutes'
-              },
-              {
-                description: 'Refill soap, TP, hand towels',
-                isCompleted: false,
-                estimatedTime: '5 minutes'
-              }
-            ],
-            specialInstructions: ['Scrub grout weekly with baking soda mix'],
-            fragileItems: []
-          }
-        ],
-        instructions: 'Focus on kitchen and bathroom',
-        specialRequirements: ['Pet-friendly cleaning', 'Eco-friendly products'],
-        owner: {
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone
-        },
-        coordinates: {
-          latitude: 35.7796,
-          longitude: -78.6382
-        }
+    // Create a comprehensive sample property
+    console.log('🏠 Creating a comprehensive sample property...');
+    const sampleProperty = new Property({
+      propertyId: 'EO-1208-RDU',
+      name: 'Enchanted Oaks House',
+      address: '1208 Enchanted Oaks Drive, Raleigh, NC 27606',
+      type: 'house',
+      squareFootage: 1945,
+      manual: {
+        title: 'Live Cleaning & Maintenance Manual',
+        content: 'Detailed manual content goes here. Focus on kitchen and bathrooms. Use special cleaner for granite countertops.',
       },
-      {
-        propertyId: 'DT-123-MAIN',
-        name: 'Downtown Apartment',
-        address: '123 Main St, Downtown',
-        type: 'apartment',
-        rooms: 2,
-        bathrooms: 1,
-        squareFootage: 1200,
-        estimatedTime: '1.5 hours',
-        manual: {
-          title: 'Live Cleaning & Maintenance Manual',
-          content: `Live Cleaning & Maintenance Manual
-123 Main St, Downtown
-Property Overview
-- Property ID: DT-123-MAIN
-- Type: Apartment
-- Square Footage: 1,200 sq ft
-- time: 1.5 hours
-
-Living Room
-- Dust all surfaces
-- Vacuum carpets
-- Clean windows
-
-Kitchen
-- Clean countertops
-- Wipe down appliances
-- Empty trash
-
-Bathroom
-- Clean toilet and sink
-- Wipe down shower
-- Restock supplies`,
-          lastUpdated: new Date()
+      roomTasks: [
+        {
+          roomType: 'Kitchen',
+          tasks: [
+            { description: 'Clean countertops'},
+            { description: 'Wipe down appliances'},
+            { description: 'Clean sink'}
+          ],
+          estimatedTime: '45 minutes',
+          specialInstructions: ['Use granite-safe cleaner only.'],
+          isCompleted: false
         },
-        roomTasks: [
-          {
-            roomType: 'living_room',
-            tasks: [
-              {
-                description: 'Dust all surfaces',
-                isCompleted: false,
-                estimatedTime: '10 minutes'
-              },
-              {
-                description: 'Vacuum carpets',
-                isCompleted: false,
-                estimatedTime: '15 minutes'
-              },
-              {
-                description: 'Clean windows',
-                isCompleted: false,
-                estimatedTime: '10 minutes'
-              }
-            ],
-            specialInstructions: [],
-            fragileItems: []
-          },
-          {
-            roomType: 'kitchen',
-            tasks: [
-              {
-                description: 'Clean countertops',
-                isCompleted: false,
-                estimatedTime: '10 minutes'
-              },
-              {
-                description: 'Wipe down appliances',
-                isCompleted: false,
-                estimatedTime: '15 minutes'
-              },
-              {
-                description: 'Empty trash',
-                isCompleted: false,
-                estimatedTime: '5 minutes'
-              }
-            ],
-            specialInstructions: [],
-            fragileItems: []
-          },
-          {
-            roomType: 'bathroom',
-            tasks: [
-              {
-                description: 'Clean toilet and sink',
-                isCompleted: false,
-                estimatedTime: '10 minutes'
-              },
-              {
-                description: 'Wipe down shower',
-                isCompleted: false,
-                estimatedTime: '10 minutes'
-              },
-              {
-                description: 'Restock supplies',
-                isCompleted: false,
-                estimatedTime: '5 minutes'
-              }
-            ],
-            specialInstructions: [],
-            fragileItems: []
-          }
-        ],
-        instructions: 'Focus on kitchen and bathroom',
-        specialRequirements: ['Pet-friendly cleaning', 'Eco-friendly products'],
-        owner: {
-          name: 'Sarah Johnson',
-          email: 'sarah.johnson@email.com',
-          phone: '+1 (555) 456-7890'
+        {
+          roomType: 'Master Bathroom',
+          tasks: [
+            { description: 'Clean mirror'},
+            { description: 'Scrub shower grout'},
+            { description: 'Restock towels and soap'}
+          ],
+          estimatedTime: '30 minutes',
+          specialInstructions: ['Grout needs extra attention this week.'],
+          isCompleted: false
         },
-        coordinates: {
-          latitude: 40.7128,
-          longitude: -74.0060
-        }
-      }
-    ];
+      ],
+      scheduledTime: new Date(new Date().setDate(new Date().getDate() + 2)),
+      customer: customer._id,
+      assignedTo: cleaner._id,
+      photos: [
+        {
+          url: 'https://example.com/photos/before_kitchen.jpg',
+          type: 'before',
+          notes: 'Kitchen before cleaning.',
+        },
+        {
+          url: 'https://example.com/photos/after_kitchen.jpg',
+          type: 'after',
+          notes: 'Kitchen after cleaning.',
+        },
+      ],
+      issues: [
+        {
+          type: 'stain',
+          description: 'Faint red wine stain on living room carpet.',
+          location: 'Living Room',
+          notes: 'Attempted to remove with standard cleaner, but it remains.',
+          isResolved: false,
+        },
+      ],
+      aiFeedback: [], // Initially empty
+      isActive: true,
+    });
 
-    console.log('📝 Inserting properties...');
-    const savedProperties = await Property.insertMany(properties);
-    console.log('✅ Properties created:', savedProperties.length);
+    // Save the sample property
+    await sampleProperty.save();
+    console.log('✅ Sample property created successfully.');
 
-    // Create sample tasks
-    console.log('📋 Creating sample tasks...');
-    const tasks = [
-      {
-        title: 'Kitchen Deep Clean',
-        description: 'Deep clean kitchen including appliances, cabinets, and floors',
-        property: savedProperties[0]._id,
-        address: '1208 Enchanted Oaks Drive, Raleigh, NC 27606',
-        status: 'pending',
-        estimatedTime: '2 hours',
-        priority: 'high',
-        assignedTo: cleaner._id,
-        instructions: 'Use eco-friendly cleaning products',
-        scheduledTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-        photos: [],
-        issues: [],
-        aiFeedback: [],
-        notes: 'Focus on grease removal from stovetop'
-      },
-      {
-        title: 'Bathroom Sanitization',
-        description: 'Sanitize bathroom including shower, toilet, and sink',
-        property: savedProperties[0]._id,
-        address: '1208 Enchanted Oaks Drive, Raleigh, NC 27606',
-        status: 'in_progress',
-        estimatedTime: '1.5 hours',
-        priority: 'medium',
-        assignedTo: cleaner._id,
-        instructions: 'Pay special attention to grout lines',
-        startedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // Started 2 hours ago
-        photos: [],
-        issues: [],
-        aiFeedback: [],
-        notes: 'Hard water stains on shower door need special attention'
-      },
-      {
-        title: 'Living Room Cleaning',
-        description: 'Clean living room including dusting, vacuuming, and organizing',
-        property: savedProperties[1]._id,
-        address: '123 Main St, Downtown',
-        status: 'completed',
-        estimatedTime: '1 hour',
-        priority: 'low',
-        assignedTo: cleaner._id,
-        instructions: 'Move furniture for thorough cleaning',
-        startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // Started 4 hours ago
-        completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // Completed 2 hours ago
-        actualTime: '1.2 hours',
-        photos: [],
-        issues: [],
-        aiFeedback: [],
-        notes: 'All furniture moved and cleaned underneath'
-      }
-    ];
+    // Add AI feedback related to an issue
+    const savedProperty = await Property.findOne({ propertyId: 'EO-1208-RDU' });
+    if (savedProperty && savedProperty.issues.length > 0) {
+      const issueId = savedProperty.issues[0]._id;
+      savedProperty.aiFeedback.push({
+        issueId: issueId,
+        feedback: 'The stain appears to be oil-based. A specialized solvent may be required.',
+        confidence: 0.85,
+        suggestions: ['Try using a mix of baking soda and vinegar.', 'Blot, do not rub the stain.'],
+      });
+      await savedProperty.save();
+      console.log('✅ AI feedback added to the sample property.');
+    }
 
-    await Task.insertMany(tasks);
-    console.log('✅ Tasks created');
-
-    console.log('✅ New sample data initialized successfully');
   } catch (error) {
     console.error('❌ Error initializing sample data:', error);
   }
