@@ -21,7 +21,8 @@ import {
   Building,
   Users,
   Bed,
-  Bath
+  Bath,
+  Ruler
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiService } from '../../services/apiService';
@@ -34,9 +35,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedUpcomingProperties, setExpandedUpcomingProperties] = useState<Set<string>>(new Set());
-  const [currentProperty, setCurrentProperty] = useState<any | null>(null);
-  const [currentPropertyTasks, setCurrentPropertyTasks] = useState<any[]>([]);
-  const [isCurrentPropertyExpanded, setIsCurrentPropertyExpanded] = useState(false);
+  const [currentProperties, setCurrentProperties] = useState<any[]>([]);
+  const [expandedCurrentProperties, setExpandedCurrentProperties] = useState<Set<string>>(new Set());
   const router = useRouter();
   const { authState } = useAuth();
   
@@ -84,17 +84,13 @@ export default function DashboardPage() {
           setTasks(allTasks);
 
           const grouped = groupTasksByProperty(allTasks);
-          const currentPropertyEntry = Object.values(grouped).find(group => 
-            group.tasks.some(t => t.status === 'in_progress')
-          );
+          const currentPropertyEntries = Object.values(grouped).filter(group => {
+            const allSubTasks = group.tasks.flatMap(t => t.roomTasks?.flatMap(rt => rt.tasks) || []);
+            const completedSubTasks = allSubTasks.filter(st => st.isCompleted).length;
+            return completedSubTasks > 0 && completedSubTasks < allSubTasks.length;
+          });
 
-          if (currentPropertyEntry) {
-            setCurrentProperty(currentPropertyEntry.property);
-            setCurrentPropertyTasks(currentPropertyEntry.tasks);
-          } else {
-            setCurrentProperty(null);
-            setCurrentPropertyTasks([]);
-          }
+          setCurrentProperties(currentPropertyEntries);
 
           console.log('Tasks loaded:', allTasks);
         } else {
@@ -129,10 +125,9 @@ export default function DashboardPage() {
             name: propertyName,
             address: property?.address || task.address || 'Address not available',
             type: property?.type || 'apartment',
-            rooms: property?.rooms || 0,
-            bathrooms: property?.bathrooms || 0,
-            instructions: property?.instructions || '',
-            specialRequirements: property?.specialRequirements || []
+            squareFootage: property?.squareFootage || 0,
+            instructions: property?.manual?.content || '',
+            roomTasks: property?.roomTasks || []
           },
           tasks: []
         };
@@ -317,64 +312,128 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Current Task */}
+      {/* Current Properties */}
       <div className="px-6 mb-6">
         <div className="bg-gradient-to-r from-blue-500/5 to-purple-500/5 dark:from-blue-500/10 dark:to-purple-500/10 backdrop-blur-xl rounded-3xl p-6 shadow-lg border border-blue-200/30 dark:border-blue-500/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg">Current Property</h3>
-            {currentProperty && (
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg">Current Properties</h3>
+            {currentProperties.length > 0 && (
               <span className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full shadow-lg">
-                In Progress
+                {currentProperties.length} In Progress
               </span>
             )}
           </div>
-          {currentProperty ? (
-            <div>
-              <div className="cursor-pointer" onClick={() => setIsCurrentPropertyExpanded(!isCurrentPropertyExpanded)}>
-                <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {currentProperty.name || 'Unknown Property'}
-                </h4>
-                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 flex items-center">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  {currentProperty.address || 'Address not available'}
-                </p>
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center space-x-3">
-                  <button className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
-                    <Play className="w-4 h-4" />
-                    <span className="font-semibold">Continue</span>
-                  </button>
-                  <button className="flex items-center space-x-2 bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200">
-                    <Pause className="w-4 h-4" />
-                    <span>Pause</span>
-                  </button>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Time Left</p>
-                  <p className="font-bold text-gray-900 dark:text-white text-lg">
-                    {currentPropertyTasks.find(t => t.status === 'in_progress')?.estimatedTime || 'N/A'}
-                  </p>
-                </div>
-              </div>
-              {isCurrentPropertyExpanded && (
-                <div className="space-y-3 mt-4 pt-4 border-t border-blue-200/50 animate-slide-down">
-                  {currentPropertyTasks.map((task, index) => (
-                    <div key={task._id || task.id} className="bg-white/80 rounded-lg p-3 border border-gray-200 shadow-md">
+          {currentProperties.length > 0 ? (
+            <div className="space-y-4">
+              {currentProperties.map((propertyEntry, index) => {
+                const property = propertyEntry.property;
+                const tasks = propertyEntry.tasks;
+                const propertyId = property.id;
+                const isExpanded = expandedCurrentProperties.has(propertyId);
+                
+                // Calculate progress
+                const allSubTasks = tasks.flatMap(t => t.roomTasks?.flatMap(rt => rt.tasks) || []);
+                const completedSubTasks = allSubTasks.filter(st => st.isCompleted).length;
+                const totalSubTasks = allSubTasks.length;
+                const progressPercentage = totalSubTasks > 0 ? Math.round((completedSubTasks / totalSubTasks) * 100) : 0;
+                
+                return (
+                  <div key={propertyId} className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 shadow-md hover:shadow-lg transition-all duration-200">
+                    <div className="cursor-pointer" onClick={() => {
+                      const newExpanded = new Set(expandedCurrentProperties);
+                      if (isExpanded) {
+                        newExpanded.delete(propertyId);
+                      } else {
+                        newExpanded.add(propertyId);
+                      }
+                      setExpandedCurrentProperties(newExpanded);
+                    }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+                          {property.name || 'Unknown Property'}
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                            {progressPercentage}% Complete
+                          </span>
+                          <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                              style={{ width: `${progressPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 flex items-center">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        {property.address || 'Address not available'}
+                      </p>
                       <div className="flex items-center justify-between">
-                        <h6 className="font-semibold text-gray-800 text-sm">{task.title}</h6>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium shadow-sm ${getStatusColor(task.status)}`}>
-                          {task.status.replace('_', ' ')}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className={`flex items-center space-x-1 ${getPropertyTypeColor(property.type)}`}>
+                            {getPropertyTypeIcon(property.type)}
+                            <span className="text-xs font-medium capitalize">{property.type}</span>
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {completedSubTasks}/{totalSubTasks} tasks done
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button className="flex items-center space-x-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                            <Play className="w-3 h-3" />
+                            <span>Continue</span>
+                          </button>
+                          <button className="flex items-center space-x-1 bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-xl text-xs shadow-sm hover:shadow-md transition-all duration-200">
+                            <Pause className="w-3 h-3" />
+                            <span>Pause</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {isExpanded && (
+                      <div className="space-y-2 mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 animate-slide-down">
+                        {tasks.map((task, taskIndex) => {
+                          const roomTasks = task.roomTasks || [];
+                          return (
+                            <div key={task._id || task.id || taskIndex} className="bg-gray-50/80 dark:bg-gray-900/50 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
+                                  {task.title || task.roomType || 'Room Task'}
+                                </h6>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium shadow-sm ${getStatusColor(task.status)}`}>
+                                  {task.status?.replace('_', ' ') || 'pending'}
+                                </span>
+                              </div>
+                              {roomTasks.length > 0 && (
+                                <div className="space-y-1 ml-2">
+                                  {roomTasks.map((roomTask, roomIndex) => (
+                                    <div key={roomIndex} className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-600 dark:text-gray-400">
+                                        {roomTask.roomType} - {roomTask.tasks?.length || 0} subtasks
+                                      </span>
+                                      <span className="text-gray-500 dark:text-gray-500">
+                                        {roomTask.tasks?.filter(t => t.isCompleted).length || 0}/{roomTask.tasks?.length || 0} done
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-300 text-sm">No tasks currently in progress.</p>
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-gray-400 dark:text-gray-600" />
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">No properties currently in progress</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Properties with at least one completed task will appear here</p>
             </div>
           )}
         </div>
@@ -420,6 +479,17 @@ export default function DashboardPage() {
                             <MapPin className="w-3 h-3 mr-1 text-blue-500" />
                             {property.address}
                           </p>
+                          <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 text-sm mt-2">
+                            <div className={`${getPropertyTypeColor(property.type)} flex items-center space-x-1`}>
+                              {getPropertyTypeIcon(property.type)}
+                              <span>{property.type}</span>
+                            </div>
+                            <span className="text-gray-300 dark:text-gray-600">|</span>
+                            <div className="flex items-center space-x-1">
+                              <Ruler className="w-4 h-4" />
+                              <span>{property.squareFootage} sqft</span>
+                            </div>
+                          </div>
                         </div>
                         <div className="text-right flex items-center space-x-3">
                           <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
